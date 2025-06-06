@@ -29,10 +29,6 @@ class Restaurant(db.Model, SerializerMixin):
     def validate_name(self, key, name):
         if len(name) > 50:
             raise ValueError("Name must be less than 50 characters")
-        return name@validates('name')
-    def validate_name(self, key, name):
-        if len(name) > 50:
-            raise ValueError("Name must be less than 50 characters")
         return name
 
     def __repr__(self):
@@ -47,6 +43,8 @@ class Pizza(db.Model, SerializerMixin):
     ingredients = db.Column(db.String)
 
     # add relationship
+    restaurant_pizzas = relationship('RestaurantPizza', back_populates='pizza', cascade='all, delete-orphan')
+    restaurants = relationship('Restaurant', secondary='restaurant_pizzas', back_populates='pizzas')
 
     # add serialization rules
 
