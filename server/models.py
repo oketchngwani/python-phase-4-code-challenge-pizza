@@ -13,56 +13,84 @@ metadata = MetaData(
 db = SQLAlchemy(metadata=metadata)
 
 
-class Restaurant(db.Model, SerializerMixin):
-    __tablename__ = "restaurants"
+class Restaurant(db.Model):
+    __tablename__ = 'restaurants'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     address = db.Column(db.String)
 
-    # add relationship
-    restaurant_pizzas = relationship('RestaurantPizza', back_populates='restaurant', cascade='all, delete-orphan')
-    pizzas = relationship('Pizza', secondary='restaurant_pizzas', back_populates='restaurants')
+    # Relationship mapping restaurant to RestaurantPizza objects
+    restaurant_pizzas = db.relationship(
+        'RestaurantPizza',
+        back_populates='restaurant',
+        cascade='all, delete-orphan'
+    )
 
-    # add serialization rules
-    @validates('name')
-    def validate_name(self, key, name):
-        if len(name) > 50:
-            raise ValueError("Name must be less than 50 characters")
-        return name
+    # Access pizzas through RestaurantPizza
+    pizzas = db.relationship(
+        'Pizza',
+        secondary='restaurant_pizzas',
+        back_populates='restaurants'
+    )
 
-    def __repr__(self):
-        return f"<Restaurant {self.name}>"
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "address": self.address
+        }
 
 
-class Pizza(db.Model, SerializerMixin):
-    __tablename__ = "pizzas"
+class Pizza(db.Model):
+    __tablename__ = 'pizzas'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     ingredients = db.Column(db.String)
 
-    # add relationship
-    restaurant_pizzas = relationship('RestaurantPizza', back_populates='pizza', cascade='all, delete-orphan')
-    restaurants = relationship('Restaurant', secondary='restaurant_pizzas', back_populates='pizzas')
+    restaurant_pizzas = db.relationship(
+        'RestaurantPizza',
+        back_populates='pizza',
+        cascade='all, delete-orphan'
+    )
 
-    # add serialization rules
+    restaurants = db.relationship(
+        'Restaurant',
+        secondary='restaurant_pizzas',
+        back_populates='pizzas'
+    )
 
-    def __repr__(self):
-        return f"<Pizza {self.name}, {self.ingredients}>"
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "ingredients": self.ingredients
+        }
 
 
-class RestaurantPizza(db.Model, SerializerMixin):
-    __tablename__ = "restaurant_pizzas"
+class RestaurantPizza(db.Model):
+    __tablename__ = 'restaurant_pizzas'
 
     id = db.Column(db.Integer, primary_key=True)
-    price = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
 
-    # add relationships
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'))
+    pizza_id = db.Column(db.Integer, db.ForeignKey('pizzas.id'))
 
-    # add serialization rules
+    restaurant = db.relationship('Restaurant', back_populates='restaurant_pizzas')
+    pizza = db.relationship('Pizza', back_populates='restaurant_pizzas')
 
-    # add validation
+    @validates('price')
+    def validate_price(self, key, value):
+        if value < 1 or value > 30:
+            raise ValueError("Price must be between 1 and 30")
+        return value
 
-    def __repr__(self):
-        return f"<RestaurantPizza ${self.price}>"
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "price": self.price,
+            "pizza_id": self.pizza_id,
+            "restaurant_id": self.restaurant_id
+        }
